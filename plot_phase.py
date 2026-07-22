@@ -23,11 +23,20 @@ df = df.reset_index(drop=True)
 
 # --- Color map ---
 color_map = {
-    "turbid":      "#e63946",
-    "clear":       "#457b9d",
-    "unconfirmed": "#f4a261",
-    "denatured":   "#adb5bd",
+    "turbid":          "#e63946",
+    # "turbid_atypical": "#9b59b6",   # purple — DISABLED. Sample 12 reclassified
+    #                                  # as plain "turbid" in samples.csv; leaving
+    #                                  # this here commented out in case the
+    #                                  # atypical/stringy flag is reinstated later.
+    "clear":           "#457b9d",
+    "unconfirmed":     "#f4a261",
+    "denatured":       "#adb5bd",
 }
+
+# States that count as "turbid-like" for the purposes of drawing the
+# boundary wireframe.
+# TURBID_LIKE_STATES = {"turbid", "turbid_atypical"}   # DISABLED, see above
+TURBID_LIKE_STATES = {"turbid"}
 
 # --- Sample grid map ---
 SAMPLE_GRID = {
@@ -83,8 +92,8 @@ def build_3d_figure():
             text=hover_texts,
         ))
 
-    # --- Wireframe lines between turbid points ---
-    turbid = df[df["state"].str.lower().str.strip() == "turbid"].copy()
+    # --- Wireframe lines between turbid-like points (turbid + turbid_atypical) ---
+    turbid = df[df["state"].str.lower().str.strip().isin(TURBID_LIKE_STATES)].copy()
     turbid = turbid.sort_values(["cp", "cs", "T"])
 
     # vertical threads (same composition, across T)
@@ -305,6 +314,8 @@ def show_image(clickData):
     if os.path.exists(img_path):
         with open(img_path, "rb") as f_img:
             encoded = base64.b64encode(f_img.read()).decode("utf-8")
+        # FIX: was missing the "data:image/jpeg;base64," prefix, so the
+        # browser had no way to decode the src and no image ever rendered.
         return f"data:image/jpeg;base64,{encoded}", img_visible, info, ph_hidden
     else:
         return "", img_hidden, info + "\n(no image file)", ph_visible
